@@ -787,6 +787,19 @@ body::after {
     margin-top: 4px;
 }
 
+/* Own messages — align right */
+.chat-message.own-message {
+    flex-direction: row-reverse;
+}
+.chat-message.own-message .chat-bubble {
+    background: rgba(212, 168, 68, 0.12);
+    border-radius: 12px 12px 4px 12px;
+    border: 1px solid rgba(212, 168, 68, 0.2);
+}
+.chat-message.own-message .chat-bubble-name {
+    text-align: right;
+}
+
 .chat-input-area {
     display: flex;
     align-items: center;

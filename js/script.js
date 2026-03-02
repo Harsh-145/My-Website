@@ -30,7 +30,7 @@ var useFirebase = false;
 var fbDB = null;
 
 try {
-    if (FIREBASE_CONFIG.apiKey !== "AIzaSyBVJ-aZmf-6fge4_RYbUywcDMUMYSdYPzI" && typeof firebase !== 'undefined') {
+    if (FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY" && typeof firebase !== 'undefined') {
         firebase.initializeApp(FIREBASE_CONFIG);
         fbDB = firebase.database();
         useFirebase = true;
@@ -117,6 +117,17 @@ var currentUser = DB.get('currentUser', null);
 
 function getUsers() { return DB.get('users', []); }
 
+// Simple hash for passwords — NOT cryptographic, but prevents plain-text storage
+function simpleHash(str) {
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) {
+        var ch = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + ch;
+        hash = hash & hash; // Convert to 32-bit int
+    }
+    return 'wh_' + Math.abs(hash).toString(36);
+}
+
 function isAdmin() {
     if (!currentUser) return false;
     if (ADMIN_USERS.indexOf(currentUser.username) !== -1) return true;
@@ -160,14 +171,28 @@ function handleRegister(e) {
     var house = document.getElementById('reg-house').value;
     var password = document.getElementById('reg-password').value;
 
+    if (!username || username.length < 3) {
+        showToast('Username must be at least 3 characters!', 'error');
+        return;
+    }
+    if (!password || password.length < 4) {
+        showToast('Password must be at least 4 characters!', 'error');
+        return;
+    }
+
     var users = getUsers();
     if (users.find(function(u) { return u.username.toLowerCase() === username.toLowerCase(); })) {
         showToast('Username already taken!', 'error');
         return;
     }
+    if (users.find(function(u) { return u.email && u.email.toLowerCase() === email.toLowerCase(); })) {
+        showToast('Email already registered! Try signing in.', 'error');
+        return;
+    }
 
     var user = {
-        username: username, email: email, house: house, password: password,
+        username: username, email: email, house: house,
+        password: simpleHash(password),
         joinedAt: Date.now(),
         role: ADMIN_USERS.indexOf(username) !== -1 ? 'admin' : 'user',
         status: 'active'
@@ -178,11 +203,11 @@ function handleRegister(e) {
     currentUser = { username: username, house: house, email: email };
     DB.set('currentUser', currentUser);
 
+    document.getElementById('register-form').reset();
     closeAuthModal();
     updateAuthUI();
     renderBlogs(); renderVideos(); renderMemes();
     showToast('Welcome to the Order, ' + username + '!', 'success');
-    document.getElementById('register-form').reset();
 }
 
 function handleLogin(e) {
@@ -190,11 +215,40 @@ function handleLogin(e) {
     var username = document.getElementById('login-username').value.trim();
     var password = document.getElementById('login-password').value;
 
+    if (!username || !password) {
+        showToast('Please fill in all fields!', 'error');
+        return;
+    }
+
     var users = getUsers();
-    var user = users.find(function(u) { return u.username === username && u.password === password; });
+    // Case-insensitive username match
+    var user = users.find(function(u) {
+        return u.username.toLowerCase() === username.toLowerCase();
+    });
 
     if (!user) {
-        showToast('Invalid credentials! Try again.', 'error');
+        showToast('No account found with that username!', 'error');
+        document.getElementById('login-password').value = '';
+        return;
+    }
+
+    // Support both hashed and legacy plain-text passwords
+    var passwordMatch = false;
+    if (user.password && user.password.indexOf('wh_') === 0) {
+        // Hashed password
+        passwordMatch = (simpleHash(password) === user.password);
+    } else {
+        // Legacy plain-text — migrate to hashed on successful login
+        passwordMatch = (user.password === password);
+        if (passwordMatch) {
+            user.password = simpleHash(password);
+            DB.set('users', users);
+        }
+    }
+
+    if (!passwordMatch) {
+        showToast('Incorrect password!', 'error');
+        document.getElementById('login-password').value = '';
         return;
     }
 
@@ -206,11 +260,11 @@ function handleLogin(e) {
     currentUser = { username: user.username, house: user.house, email: user.email };
     DB.set('currentUser', currentUser);
 
+    document.getElementById('login-form').reset();
     closeAuthModal();
     updateAuthUI();
     renderBlogs(); renderVideos(); renderMemes();
     showToast('Welcome back, ' + user.username + '!', 'success');
-    document.getElementById('login-form').reset();
 }
 
 function logout() {
@@ -225,6 +279,17 @@ function logout() {
 function updateAuthUI() {
     var authBtn = document.getElementById('auth-btn');
     var adminNavItem = document.getElementById('admin-nav-item');
+
+    // Validate session — if currentUser exists but not found in users DB, clear it
+    if (currentUser) {
+        var users = getUsers();
+        var found = users.find(function(u) { return u.username === currentUser.username; });
+        if (users.length > 0 && !found) {
+            // User was deleted or data was wiped
+            currentUser = null;
+            DB.set('currentUser', null);
+        }
+    }
 
     if (currentUser) {
         var houseEmoji = { gryffindor: '\u{1F981}', slytherin: '\u{1F40D}', ravenclaw: '\u{1F985}', hufflepuff: '\u{1F9A1}' };
@@ -435,7 +500,11 @@ Snowflake.prototype.draw = function() {
 var snowflakes = [];
 for (var si = 0; si < 120; si++) snowflakes.push(new Snowflake());
 
+var snowPaused = false;
+document.addEventListener('visibilitychange', function() { snowPaused = document.hidden; if (!snowPaused) animateSnow(); });
+
 function animateSnow() {
+    if (snowPaused) return;
     snowCtx.clearRect(0, 0, snowCanvas.width, snowCanvas.height);
     for (var sj = 0; sj < snowflakes.length; sj++) { snowflakes[sj].update(); snowflakes[sj].draw(); }
     requestAnimationFrame(animateSnow);
@@ -476,6 +545,8 @@ function formatText(type) {
 
 function submitBlog(e) {
     e.preventDefault();
+    var submitBtn = e.target.querySelector('[type="submit"]');
+    if (submitBtn) { submitBtn.disabled = true; setTimeout(function() { submitBtn.disabled = false; }, 2000); }
 
     var blog = {
         id: Date.now(),
@@ -698,6 +769,8 @@ function closeVideoUploader() {
 
 function submitVideo(e) {
     e.preventDefault();
+    var submitBtn = e.target.querySelector('[type="submit"]');
+    if (submitBtn) { submitBtn.disabled = true; setTimeout(function() { submitBtn.disabled = false; }, 2000); }
 
     var video = {
         id: Date.now(),
@@ -810,8 +883,15 @@ function openVideoPlayer(id) {
 }
 
 function closeVideoPlayer() {
-    document.getElementById('video-player-modal').classList.remove('open');
-    document.getElementById('video-player-content').innerHTML = '';
+    var modal = document.getElementById('video-player-modal');
+    var content = document.getElementById('video-player-content');
+    // Stop video/iframe before removing
+    var iframe = content.querySelector('iframe');
+    var video = content.querySelector('video');
+    if (iframe) iframe.src = '';
+    if (video) { video.pause(); video.src = ''; }
+    modal.classList.remove('open');
+    content.innerHTML = '';
 }
 
 // ==========================================
@@ -872,6 +952,8 @@ function processImageFile(file) {
 
 function submitMeme(e) {
     e.preventDefault();
+    var submitBtn = e.target.querySelector('[type="submit"]');
+    if (submitBtn) { submitBtn.disabled = true; setTimeout(function() { submitBtn.disabled = false; }, 2000); }
 
     var imageUrl = document.getElementById('meme-url').value.trim();
     var imageData = currentMemeData || imageUrl;
@@ -998,7 +1080,7 @@ function sendMessage(e) {
     var isAnonymous = document.getElementById('chat-anonymous').checked;
 
     var message = {
-        id: Date.now() + Math.random(),
+        id: 'msg_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
         text: text,
         author: getAuthorName(isAnonymous),
         anonymous: isAnonymous,
@@ -1012,7 +1094,7 @@ function sendMessage(e) {
     DB.set('chat_' + currentRoom, messages);
 
     input.value = '';
-    if (!useFirebase) renderChatMessages();
+    renderChatMessages(); // Always render locally for instant feedback
 }
 
 function renderChatMessages() {
@@ -1251,13 +1333,13 @@ function renderAdminChat() {
                 '<div class="chat-bubble-name' + (m.anonymous ? ' anon' : '') + '">' + escapeHtml(m.author) + ' <span style="color:var(--text-muted);font-size:0.72rem;">' + time + '</span></div>' +
                 '<div class="chat-bubble-text">' + escapeHtml(m.text) + '</div>' +
             '</div>' +
-            '<button class="delete-msg-btn" onclick="deleteMessage(\'' + room + '\', ' + m.id + ')" title="Delete message">\u2715</button>' +
+            '<button class="delete-msg-btn" onclick="deleteMessage(\'' + room + '\', \'' + m.id + '\')" title="Delete message">\u2715</button>' +
         '</div>';
     }).join('');
 }
 
 function deleteMessage(room, msgId) {
-    var messages = getChatMessages(room).filter(function(m) { return m.id !== msgId; });
+    var messages = getChatMessages(room).filter(function(m) { return String(m.id) !== String(msgId); });
     DB.set('chat_' + room, messages);
     renderAdminChat();
     if (currentRoom === room) renderChatMessages();
@@ -1307,18 +1389,24 @@ function markdownToHTML(md) {
     return html;
 }
 
-// Close modals on overlay click
+// Close modals on overlay click (with video cleanup)
+function closeAllModals() {
+    var videoModal = document.getElementById('video-player-modal');
+    if (videoModal.classList.contains('open')) closeVideoPlayer();
+    document.querySelectorAll('.modal-overlay.open').forEach(function(m) { m.classList.remove('open'); });
+}
+
 document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
     overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) overlay.classList.remove('open');
+        if (e.target !== overlay) return;
+        if (overlay.id === 'video-player-modal') { closeVideoPlayer(); return; }
+        overlay.classList.remove('open');
     });
 });
 
 // Close modals on Escape key
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        document.querySelectorAll('.modal-overlay.open').forEach(function(m) { m.classList.remove('open'); });
-    }
+    if (e.key === 'Escape') closeAllModals();
 });
 
 // ==========================================

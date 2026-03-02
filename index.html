@@ -30,9 +30,13 @@
                 <li><a href="#videos" class="nav-link" data-section="videos">Videos</a></li>
                 <li><a href="#memes" class="nav-link" data-section="memes">Memes</a></li>
                 <li><a href="#chat" class="nav-link" data-section="chat">Live Chat</a></li>
+                <li id="admin-nav-item" style="display:none;"><a href="#admin" class="nav-link" data-section="admin">⚙️ Admin</a></li>
             </ul>
             <div class="nav-actions">
-                <button id="music-toggle" class="music-btn" title="Toggle music">🔇</button>
+                <button id="music-toggle" class="music-btn" title="Toggle music">
+                    <span id="music-icon">🔇</span>
+                    <span id="music-loading" class="music-loading" style="display:none;"></span>
+                </button>
                 <button id="auth-btn" class="btn btn-gold btn-sm">Sign In</button>
             </div>
         </div>
@@ -284,6 +288,116 @@
         </div>
     </section>
 
+    <!-- ========== ADMIN PANEL SECTION ========== -->
+    <section id="admin" class="section admin-section">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">⚙️ Ministry of Magic — Admin Panel</h2>
+                <p class="section-subtitle">Manage users, content, and site settings</p>
+            </div>
+
+            <div class="admin-grid">
+                <!-- Stats Cards -->
+                <div class="admin-stats">
+                    <div class="stat-card glass-card">
+                        <div class="stat-card-icon">👥</div>
+                        <div class="stat-card-value" id="stat-users">0</div>
+                        <div class="stat-card-label">Users</div>
+                    </div>
+                    <div class="stat-card glass-card">
+                        <div class="stat-card-icon">📜</div>
+                        <div class="stat-card-value" id="stat-blogs">0</div>
+                        <div class="stat-card-label">Blog Posts</div>
+                    </div>
+                    <div class="stat-card glass-card">
+                        <div class="stat-card-icon">🎬</div>
+                        <div class="stat-card-value" id="stat-videos">0</div>
+                        <div class="stat-card-label">Videos</div>
+                    </div>
+                    <div class="stat-card glass-card">
+                        <div class="stat-card-icon">😂</div>
+                        <div class="stat-card-value" id="stat-memes">0</div>
+                        <div class="stat-card-label">Memes</div>
+                    </div>
+                </div>
+
+                <!-- Admin Tabs -->
+                <div class="admin-tabs">
+                    <button class="admin-tab active" onclick="switchAdminTab('users')">👥 Users</button>
+                    <button class="admin-tab" onclick="switchAdminTab('content')">📄 Content</button>
+                    <button class="admin-tab" onclick="switchAdminTab('chat-mod')">💬 Chat</button>
+                </div>
+
+                <!-- Users Tab -->
+                <div class="admin-panel glass-card" id="admin-users-panel">
+                    <div class="admin-panel-header">
+                        <h3>Registered Users</h3>
+                        <input type="text" id="user-search" placeholder="Search users..." oninput="renderAdminUsers()">
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table" id="admin-users-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>House</th>
+                                    <th>Joined</th>
+                                    <th>Role</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-users-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Content Tab -->
+                <div class="admin-panel glass-card" id="admin-content-panel" style="display:none;">
+                    <div class="admin-panel-header">
+                        <h3>Content Management</h3>
+                        <select id="content-type-filter" onchange="renderAdminContent()">
+                            <option value="blogs">📜 Blog Posts</option>
+                            <option value="videos">🎬 Videos</option>
+                            <option value="memes">😂 Memes</option>
+                        </select>
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Title / Caption</th>
+                                    <th>Author</th>
+                                    <th>Date</th>
+                                    <th>Likes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-content-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Chat Moderation Tab -->
+                <div class="admin-panel glass-card" id="admin-chat-panel" style="display:none;">
+                    <div class="admin-panel-header">
+                        <h3>Chat Moderation</h3>
+                        <div class="admin-panel-actions">
+                            <select id="chat-room-filter" onchange="renderAdminChat()">
+                                <option value="general">🏰 General</option>
+                                <option value="gryffindor">🦁 Gryffindor</option>
+                                <option value="slytherin">🐍 Slytherin</option>
+                                <option value="ravenclaw">🦅 Ravenclaw</option>
+                                <option value="hufflepuff">🦡 Hufflepuff</option>
+                            </select>
+                            <button class="btn btn-danger btn-sm" onclick="clearChatRoom()">🗑️ Clear Room</button>
+                        </div>
+                    </div>
+                    <div class="admin-chat-list" id="admin-chat-list"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- ========== AUTH MODAL ========== -->
     <div class="modal-overlay" id="auth-modal">
         <div class="modal glass-card modal-sm">
@@ -346,10 +460,14 @@
     <!-- ========== TOAST NOTIFICATION ========== -->
     <div id="toast-container"></div>
 
-    <!-- Background music -->
-    <audio id="bg-music" loop>
+    <!-- Background music (preload for faster start) -->
+    <audio id="bg-music" loop preload="auto">
         <source src="audio/background-music.mp3" type="audio/mpeg">
     </audio>
+
+    <!-- Firebase SDK (for shared real-time data) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
     <script src="js/script.js"></script>
 </body>

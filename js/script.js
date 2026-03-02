@@ -30,7 +30,7 @@ var useFirebase = false;
 var fbDB = null;
 
 try {
-    if (FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY" && typeof firebase !== 'undefined') {
+    if (FIREBASE_CONFIG.apiKey !== "AIzaSyBVJ-aZmf-6fge4_RYbUywcDMUMYSdYPzI" && typeof firebase !== 'undefined') {
         firebase.initializeApp(FIREBASE_CONFIG);
         fbDB = firebase.database();
         useFirebase = true;

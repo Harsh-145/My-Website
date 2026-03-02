@@ -13,13 +13,14 @@
 // 4. Go to Project Settings > General > Your apps > Add Web App
 // 5. Copy your config values below and replace the placeholders
 var FIREBASE_CONFIG = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+ apiKey: "AIzaSyBVJ-aZmf-6fge4_RYbUywcDMUMYSdYPzI",
+  authDomain: "blogbyharsh-d2b90.firebaseapp.com",
+  databaseURL: "https://blogbyharsh-d2b90-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "blogbyharsh-d2b90",
+  storageBucket: "blogbyharsh-d2b90.firebasestorage.app",
+  messagingSenderId: "1071043804200",
+  appId: "1:1071043804200:web:0bdc6f9a7505586003891d",
+  measurementId: "G-96S0YNVSG7"
 };
 
 // Admin usernames - these users get access to the Admin Panel

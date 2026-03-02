@@ -4,41 +4,354 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyWebPageIndex</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <title>The Wizarding Hub — A Harry Potter Fan Site</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
-    <!-- Music toggle button -->
-    <button id="music-toggle" class="music-btn">🔇</button>
-
-    <div class="main-content-wrapper">
-        <div class="main-content">
-            <h1>Welcome to My Web Page</h1>
-            
-            <p>This is a web page where I will share many things from my experiences here. It's a secret, you know.</p>
-            
-            <p>Well, well, see how it goes. I want you to guess what things I will share with you.</p>
-            
-            <p>I actually wanted you to tell me gibberish, and I love you🫶.</p>
-            
-            <h2>Thanks by Harsh Yadav</h2>
-        </div>
-    </div>
-
     <!-- Snow canvas overlay -->
     <canvas id="snow-canvas"></canvas>
 
+    <!-- ========== NAVIGATION ========== -->
+    <nav id="main-nav" class="glass-nav">
+        <div class="nav-inner">
+            <a href="#" class="nav-logo" data-section="hero">
+                <span class="logo-icon">⚡</span>
+                <span class="logo-text">The Wizarding Hub</span>
+            </a>
+            <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="nav-links">
+                <li><a href="#hero" class="nav-link active" data-section="hero">Home</a></li>
+                <li><a href="#blogs" class="nav-link" data-section="blogs">Blog</a></li>
+                <li><a href="#videos" class="nav-link" data-section="videos">Videos</a></li>
+                <li><a href="#memes" class="nav-link" data-section="memes">Memes</a></li>
+                <li><a href="#chat" class="nav-link" data-section="chat">Live Chat</a></li>
+            </ul>
+            <div class="nav-actions">
+                <button id="music-toggle" class="music-btn" title="Toggle music">🔇</button>
+                <button id="auth-btn" class="btn btn-gold btn-sm">Sign In</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ========== HERO SECTION ========== -->
+    <section id="hero" class="section hero-section active-section">
+        <div class="hero-content">
+            <img src="images/img.png" alt="Harry Potter Fan" class="hero-character" />
+            <div class="hero-text">
+                <h1 class="hero-title">Welcome to<br><span class="gold-text">The Wizarding Hub</span></h1>
+                <p class="hero-subtitle">A magical community for Potterheads — share blogs, videos, memes, and chat with fellow wizards & witches.</p>
+                <div class="hero-buttons">
+                    <button class="btn btn-gold btn-lg" onclick="navigateTo('blogs')">Explore Blogs</button>
+                    <button class="btn btn-outline btn-lg" onclick="navigateTo('chat')">Join Chat</button>
+                </div>
+                <p class="hero-credit">Created with ⚡ by <strong>Harsh Yadav</strong></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== BLOG SECTION ========== -->
+    <section id="blogs" class="section blog-section">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">📜 The Daily Prophet — Blog</h2>
+                <p class="section-subtitle">Share your theories, reviews, and magical stories</p>
+                <button class="btn btn-gold" id="new-blog-btn" onclick="openBlogEditor()">✍️ Write a Post</button>
+            </div>
+
+            <!-- Blog Editor Modal -->
+            <div class="modal-overlay" id="blog-editor-modal">
+                <div class="modal glass-card">
+                    <button class="modal-close" onclick="closeBlogEditor()">&times;</button>
+                    <h3>Write a New Blog Post</h3>
+                    <form id="blog-form" onsubmit="submitBlog(event)">
+                        <div class="form-group">
+                            <label for="blog-title">Title</label>
+                            <input type="text" id="blog-title" placeholder="e.g. Why Snape is the Real Hero" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="blog-category">Category</label>
+                            <select id="blog-category">
+                                <option value="theory">Fan Theory</option>
+                                <option value="review">Book/Movie Review</option>
+                                <option value="character">Character Analysis</option>
+                                <option value="general">General</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="blog-cover">Cover Image URL (optional)</label>
+                            <input type="url" id="blog-cover" placeholder="https://example.com/image.jpg">
+                        </div>
+                        <div class="form-group">
+                            <label for="blog-body">Content</label>
+                            <div class="editor-toolbar">
+                                <button type="button" onclick="formatText('bold')" title="Bold"><b>B</b></button>
+                                <button type="button" onclick="formatText('italic')" title="Italic"><i>I</i></button>
+                                <button type="button" onclick="formatText('heading')" title="Heading">H</button>
+                                <button type="button" onclick="formatText('quote')" title="Quote">❝</button>
+                                <button type="button" onclick="formatText('list')" title="List">☰</button>
+                            </div>
+                            <textarea id="blog-body" rows="12" placeholder="Write your magical thoughts here... (Markdown supported)" required></textarea>
+                        </div>
+                        <div class="form-group form-row">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blog-anonymous"> Post anonymously
+                            </label>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-outline" onclick="closeBlogEditor()">Cancel</button>
+                            <button type="submit" class="btn btn-gold">Publish Post</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Blog Filter -->
+            <div class="filter-bar">
+                <button class="filter-chip active" data-filter="all" onclick="filterBlogs('all')">All</button>
+                <button class="filter-chip" data-filter="theory" onclick="filterBlogs('theory')">Fan Theories</button>
+                <button class="filter-chip" data-filter="review" onclick="filterBlogs('review')">Reviews</button>
+                <button class="filter-chip" data-filter="character" onclick="filterBlogs('character')">Characters</button>
+                <button class="filter-chip" data-filter="general" onclick="filterBlogs('general')">General</button>
+            </div>
+
+            <!-- Blog Grid -->
+            <div class="blog-grid" id="blog-grid">
+                <!-- Blogs rendered by JS -->
+            </div>
+            <p class="empty-state" id="blogs-empty">No posts yet. Be the first wizard to share your thoughts! ✨</p>
+        </div>
+    </section>
+
+    <!-- ========== BLOG DETAIL MODAL ========== -->
+    <div class="modal-overlay" id="blog-detail-modal">
+        <div class="modal glass-card modal-lg">
+            <button class="modal-close" onclick="closeBlogDetail()">&times;</button>
+            <div id="blog-detail-content"></div>
+        </div>
+    </div>
+
+    <!-- ========== VIDEO SECTION ========== -->
+    <section id="videos" class="section video-section">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">🎬 Pensieve — Videos</h2>
+                <p class="section-subtitle">Upload and watch fan-made videos, edits, and tributes</p>
+                <button class="btn btn-gold" onclick="openVideoUploader()">📤 Upload Video</button>
+            </div>
+
+            <!-- Video Uploader Modal -->
+            <div class="modal-overlay" id="video-upload-modal">
+                <div class="modal glass-card">
+                    <button class="modal-close" onclick="closeVideoUploader()">&times;</button>
+                    <h3>Upload a Video</h3>
+                    <form id="video-form" onsubmit="submitVideo(event)">
+                        <div class="form-group">
+                            <label for="video-title">Title</label>
+                            <input type="text" id="video-title" placeholder="e.g. Hogwarts Fan Edit" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="video-desc">Description</label>
+                            <textarea id="video-desc" rows="3" placeholder="Describe your video..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="video-url">Video URL (YouTube, Vimeo, or direct link)</label>
+                            <input type="url" id="video-url" placeholder="https://youtube.com/watch?v=..." required>
+                        </div>
+                        <div class="form-group">
+                            <label for="video-thumb">Thumbnail URL (optional)</label>
+                            <input type="url" id="video-thumb" placeholder="https://example.com/thumb.jpg">
+                        </div>
+                        <div class="form-group form-row">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="video-anonymous"> Upload anonymously
+                            </label>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-outline" onclick="closeVideoUploader()">Cancel</button>
+                            <button type="submit" class="btn btn-gold">Upload</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Video Grid -->
+            <div class="video-grid" id="video-grid">
+                <!-- Videos rendered by JS -->
+            </div>
+            <p class="empty-state" id="videos-empty">No videos yet. Share your magical creations! 🎥</p>
+        </div>
+    </section>
+
+    <!-- ========== VIDEO PLAYER MODAL ========== -->
+    <div class="modal-overlay" id="video-player-modal">
+        <div class="modal glass-card modal-lg">
+            <button class="modal-close" onclick="closeVideoPlayer()">&times;</button>
+            <div id="video-player-content"></div>
+        </div>
+    </div>
+
+    <!-- ========== MEMES SECTION ========== -->
+    <section id="memes" class="section meme-section">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">😂 Room of Requirement — Memes</h2>
+                <p class="section-subtitle">Post and browse the funniest HP memes</p>
+                <button class="btn btn-gold" onclick="openMemeUploader()">🖼️ Post a Meme</button>
+            </div>
+
+            <!-- Meme Uploader Modal -->
+            <div class="modal-overlay" id="meme-upload-modal">
+                <div class="modal glass-card">
+                    <button class="modal-close" onclick="closeMemeUploader()">&times;</button>
+                    <h3>Post a Meme</h3>
+                    <form id="meme-form" onsubmit="submitMeme(event)">
+                        <div class="form-group">
+                            <label for="meme-caption">Caption</label>
+                            <input type="text" id="meme-caption" placeholder="e.g. When Dumbledore said calmly..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>Meme Image</label>
+                            <div class="upload-area" id="meme-upload-area">
+                                <input type="file" id="meme-file" accept="image/*" hidden>
+                                <div class="upload-placeholder" id="meme-upload-placeholder">
+                                    <span class="upload-icon">📷</span>
+                                    <p>Click or drag to upload an image</p>
+                                    <p class="upload-hint">or paste an image URL below</p>
+                                </div>
+                                <img id="meme-preview" class="upload-preview" alt="Preview" style="display:none;">
+                            </div>
+                            <input type="url" id="meme-url" placeholder="Or paste image URL here..." class="mt-sm">
+                        </div>
+                        <div class="form-group">
+                            <label for="meme-tags">Tags</label>
+                            <input type="text" id="meme-tags" placeholder="e.g. dumbledore, snape, funny (comma separated)">
+                        </div>
+                        <div class="form-group form-row">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="meme-anonymous"> Post anonymously
+                            </label>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-outline" onclick="closeMemeUploader()">Cancel</button>
+                            <button type="submit" class="btn btn-gold">Post Meme</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Meme Grid -->
+            <div class="meme-grid" id="meme-grid">
+                <!-- Memes rendered by JS -->
+            </div>
+            <p class="empty-state" id="memes-empty">No memes yet. Summon some laughs! 😂</p>
+        </div>
+    </section>
+
+    <!-- ========== LIVE CHAT SECTION ========== -->
+    <section id="chat" class="section chat-section">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">💬 The Great Hall — Live Chat</h2>
+                <p class="section-subtitle">Chat in real-time with fellow Potterheads</p>
+            </div>
+            <div class="chat-container glass-card">
+                <div class="chat-rooms">
+                    <h4>Rooms</h4>
+                    <button class="chat-room active" data-room="general" onclick="switchRoom('general')">🏰 General</button>
+                    <button class="chat-room" data-room="gryffindor" onclick="switchRoom('gryffindor')">🦁 Gryffindor</button>
+                    <button class="chat-room" data-room="slytherin" onclick="switchRoom('slytherin')">🐍 Slytherin</button>
+                    <button class="chat-room" data-room="ravenclaw" onclick="switchRoom('ravenclaw')">🦅 Ravenclaw</button>
+                    <button class="chat-room" data-room="hufflepuff" onclick="switchRoom('hufflepuff')">🦡 Hufflepuff</button>
+                </div>
+                <div class="chat-main">
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- Messages rendered by JS -->
+                    </div>
+                    <form class="chat-input-area" id="chat-form" onsubmit="sendMessage(event)">
+                        <label class="checkbox-label chat-anon-toggle">
+                            <input type="checkbox" id="chat-anonymous"> Anon
+                        </label>
+                        <input type="text" id="chat-input" placeholder="Cast your message..." autocomplete="off" required>
+                        <button type="submit" class="btn btn-gold btn-sm">Send ⚡</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== AUTH MODAL ========== -->
+    <div class="modal-overlay" id="auth-modal">
+        <div class="modal glass-card modal-sm">
+            <button class="modal-close" onclick="closeAuthModal()">&times;</button>
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+                <button class="auth-tab" onclick="switchAuthTab('register')">Register</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" placeholder="Your wizard name" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Your secret spell" required>
+                </div>
+                <button type="submit" class="btn btn-gold btn-full">Enter the Wizarding World</button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" class="auth-form" style="display:none;" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label for="reg-username">Username</label>
+                    <input type="text" id="reg-username" placeholder="Choose your wizard name" required minlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="reg-email">Email</label>
+                    <input type="email" id="reg-email" placeholder="owl@hogwarts.edu" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-house">House</label>
+                    <select id="reg-house">
+                        <option value="gryffindor">🦁 Gryffindor</option>
+                        <option value="slytherin">🐍 Slytherin</option>
+                        <option value="ravenclaw">🦅 Ravenclaw</option>
+                        <option value="hufflepuff">🦡 Hufflepuff</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="reg-password">Password</label>
+                    <input type="password" id="reg-password" placeholder="Create a secret spell" required minlength="4">
+                </div>
+                <button type="submit" class="btn btn-gold btn-full">Join the Order</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========== FOOTER ========== -->
+    <footer class="site-footer" id="site-footer">
+        <div class="footer-inner">
+            <p>⚡ The Wizarding Hub &mdash; A Harry Potter Fan Community</p>
+            <p class="footer-sub">Created by <strong>Harsh Yadav</strong> &bull; Not affiliated with Warner Bros. or J.K. Rowling</p>
+            <p class="footer-sub">Mischief Managed. 🗺️</p>
+        </div>
+    </footer>
+
+    <!-- ========== TOAST NOTIFICATION ========== -->
+    <div id="toast-container"></div>
+
     <!-- Background music -->
-    <audio id="bg-music" loop autoplay>
-        <source src="../audio/background-music.mp3" type="audio/mpeg">
-        <source src="../audio/background-music.ogg" type="audio/ogg">
+    <audio id="bg-music" loop>
+        <source src="audio/background-music.mp3" type="audio/mpeg">
     </audio>
 
-    <!-- Harry Potter image -->
-    <img src="../images/img.png" alt="Harry Potter" class="hp-img hp-1" />
-
-    <script src="../js/script.js"></script>
+    <script src="js/script.js"></script>
 </body>
 
 </html>

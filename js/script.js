@@ -1558,6 +1558,60 @@ function doSeed() {
 }
 
 // ==========================================
+// SERVICE WORKER (PWA)
+// ==========================================
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js')
+            .then(function(reg) {
+                console.log('[PWA] Service Worker registered, scope:', reg.scope);
+            })
+            .catch(function(err) {
+                console.log('[PWA] Service Worker registration failed:', err);
+            });
+    });
+}
+
+// PWA Install Prompt
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    showInstallButton();
+});
+
+function showInstallButton() {
+    const existing = document.getElementById('pwa-install-btn');
+    if (existing) existing.remove();
+
+    const btn = document.createElement('button');
+    btn.id = 'pwa-install-btn';
+    btn.className = 'nav-icon-btn';
+    btn.title = 'Install App';
+    btn.innerHTML = '📲';
+    btn.style.cssText = 'font-size:1.2rem;cursor:pointer;';
+    btn.addEventListener('click', async function() {
+        if (!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        const result = await deferredInstallPrompt.userChoice;
+        console.log('[PWA] Install prompt result:', result.outcome);
+        deferredInstallPrompt = null;
+        btn.remove();
+    });
+
+    const navActions = document.querySelector('.nav-actions');
+    if (navActions) navActions.prepend(btn);
+}
+
+window.addEventListener('appinstalled', function() {
+    console.log('[PWA] App installed successfully');
+    deferredInstallPrompt = null;
+    const btn = document.getElementById('pwa-install-btn');
+    if (btn) btn.remove();
+    showToast('App installed successfully! ⚡', 'success');
+});
+
+// ==========================================
 // INITIALIZATION
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {

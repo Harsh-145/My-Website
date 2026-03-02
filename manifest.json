@@ -1,0 +1,40 @@
+{
+  "name": "The Wizarding Hub — A Harry Potter Fan Site",
+  "short_name": "Wizarding Hub",
+  "description": "A magical Harry Potter fan community for blogs, videos, memes, and live chat.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0d0d1a",
+  "background_color": "#0d0d1a",
+  "icons": [
+    {
+      "src": "images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["entertainment", "social"],
+  "lang": "en",
+  "dir": "ltr"
+}

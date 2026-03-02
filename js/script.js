@@ -512,6 +512,76 @@ function animateSnow() {
 animateSnow();
 
 // ==========================================
+// SNOW TOGGLE
+// ==========================================
+var snowEnabled = localStorage.getItem('wh_snowEnabled') !== 'false';
+var snowToggleBtn = document.getElementById('snow-toggle');
+var snowIconEl = document.getElementById('snow-icon');
+
+function setSnowState(enabled) {
+    snowEnabled = enabled;
+    localStorage.setItem('wh_snowEnabled', enabled);
+    snowCanvas.style.display = enabled ? '' : 'none';
+    snowToggleBtn.classList.toggle('off', !enabled);
+    snowIconEl.textContent = enabled ? '\u2744\uFE0F' : '\u2744';
+    if (enabled && snowPaused) {
+        snowPaused = false;
+        animateSnow();
+    } else if (!enabled) {
+        snowPaused = true;
+        snowCtx.clearRect(0, 0, snowCanvas.width, snowCanvas.height);
+    }
+}
+
+// Apply saved preference on load
+if (!snowEnabled) setSnowState(false);
+
+snowToggleBtn.addEventListener('click', function() {
+    setSnowState(!snowEnabled);
+    showToast(snowEnabled ? 'Snow enabled \u2744\uFE0F' : 'Snow disabled', 'info');
+});
+
+// ==========================================
+// LIGHT / DARK MODE TOGGLE
+// ==========================================
+var themeToggleBtn = document.getElementById('theme-toggle');
+var themeIconEl = document.getElementById('theme-icon');
+var isLightMode = localStorage.getItem('wh_theme') === 'light';
+
+function setTheme(light) {
+    isLightMode = light;
+    localStorage.setItem('wh_theme', light ? 'light' : 'dark');
+    document.body.classList.toggle('light-mode', light);
+    themeIconEl.textContent = light ? '\uD83C\uDF19' : '\u2600\uFE0F';
+    themeToggleBtn.title = light ? 'Switch to dark mode' : 'Switch to light mode';
+    // Adjust snow opacity for light mode
+    snowflakes.forEach(function(s) {
+        s.lightMode = light;
+    });
+}
+
+// Override draw for light mode snowflakes
+var originalDraw = Snowflake.prototype.draw;
+Snowflake.prototype.draw = function() {
+    snowCtx.beginPath();
+    snowCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    if (this.lightMode) {
+        snowCtx.fillStyle = 'rgba(120, 100, 60, ' + (this.opacity * 0.5) + ')';
+    } else {
+        snowCtx.fillStyle = 'rgba(255, 255, 255, ' + this.opacity + ')';
+    }
+    snowCtx.fill();
+};
+
+// Apply saved preference on load
+if (isLightMode) setTheme(true);
+
+themeToggleBtn.addEventListener('click', function() {
+    setTheme(!isLightMode);
+    showToast(isLightMode ? 'Light mode \u2600\uFE0F' : 'Dark mode \uD83C\uDF19', 'info');
+});
+
+// ==========================================
 // BLOG SYSTEM
 // ==========================================
 function getBlogs() { return DB.get('blogs', []); }

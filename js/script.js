@@ -476,6 +476,8 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
+var mouse = { x: null, y: null };
+
 function Snowflake() { this.reset(true); }
 Snowflake.prototype.reset = function(init) {
     this.x = Math.random() * snowCanvas.width;
@@ -484,10 +486,35 @@ Snowflake.prototype.reset = function(init) {
     this.speed = Math.random() * 1 + 0.3;
     this.wind = Math.random() * 0.4 - 0.2;
     this.opacity = Math.random() * 0.6 + 0.3;
+    this.vx = 0;
+    this.vy = 0;
 };
 Snowflake.prototype.update = function() {
-    this.y += this.speed;
-    this.x += this.wind + Math.sin(this.y * 0.01) * 0.3;
+    // Gravity and wind
+    this.vy += this.speed;
+    this.vx = this.wind + Math.sin(this.y * 0.01) * 0.3;
+    
+    // Mouse interaction - repel from cursor
+    if (mouse.x !== null && mouse.y !== null) {
+        var dx = this.x - mouse.x;
+        var dy = this.y - mouse.y;
+        var distance = Math.sqrt(dx * dx + dy * dy);
+        var repelRadius = 100;
+        
+        if (distance < repelRadius) {
+            var force = (1 - distance / repelRadius) * 0.8;
+            this.vx += (dx / distance) * force * 2;
+            this.vy += (dy / distance) * force * 2;
+        }
+    }
+    
+    // Damping
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    
+    this.x += this.vx;
+    this.y += this.vy;
+    
     if (this.y > snowCanvas.height || this.x < -10 || this.x > snowCanvas.width + 10) this.reset(false);
 };
 Snowflake.prototype.draw = function() {
@@ -499,6 +526,35 @@ Snowflake.prototype.draw = function() {
 
 var snowflakes = [];
 for (var si = 0; si < 120; si++) snowflakes.push(new Snowflake());
+
+// Track mouse position for interactive snow
+document.addEventListener('mousemove', function(e) {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+});
+
+document.addEventListener('mouseleave', function() {
+    mouse.x = null;
+    mouse.y = null;
+});
+
+// Click to create wind burst
+document.addEventListener('click', function(e) {
+    if (!snowEnabled || snowPaused) return;
+    for (var b = 0; b < snowflakes.length; b++) {
+        var flake = snowflakes[b];
+        var dx = flake.x - e.clientX;
+        var dy = flake.y - e.clientY;
+        var distance = Math.sqrt(dx * dx + dy * dy);
+        var burstRadius = 150;
+        
+        if (distance < burstRadius) {
+            var force = (1 - distance / burstRadius) * 1.5;
+            flake.vx += (dx / distance) * force * 5;
+            flake.vy += (dy / distance) * force * 5;
+        }
+    }
+});
 
 var snowPaused = false;
 document.addEventListener('visibilitychange', function() { snowPaused = document.hidden; if (!snowPaused) animateSnow(); });

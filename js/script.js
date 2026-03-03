@@ -490,10 +490,6 @@ Snowflake.prototype.reset = function(init) {
     this.vy = 0;
 };
 Snowflake.prototype.update = function() {
-    // Gravity and wind
-    this.vy += this.speed;
-    this.vx = this.wind + Math.sin(this.y * 0.01) * 0.3;
-    
     // Mouse interaction - repel from cursor
     if (mouse.x !== null && mouse.y !== null) {
         var dx = this.x - mouse.x;
@@ -508,12 +504,13 @@ Snowflake.prototype.update = function() {
         }
     }
     
-    // Damping
-    this.vx *= 0.98;
-    this.vy *= 0.98;
+    // Damping on interaction velocity
+    this.vx *= 0.95;
+    this.vy *= 0.95;
     
-    this.x += this.vx;
-    this.y += this.vy;
+    // Base movement (constant) + interaction velocity
+    this.x += this.wind + Math.sin(this.y * 0.01) * 0.3 + this.vx;
+    this.y += this.speed + this.vy;
     
     if (this.y > snowCanvas.height || this.x < -10 || this.x > snowCanvas.width + 10) this.reset(false);
 };

@@ -28,16 +28,47 @@ var ADMIN_USERS = ['Harsh Yadav'];
 
 var useFirebase = false;
 var fbDB = null;
+var firebaseBootstrapStarted = false;
 
-try {
-    if (FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY" && typeof firebase !== 'undefined') {
+bootstrapFirebase();
+
+function bootstrapFirebase() {
+    if (firebaseBootstrapStarted) return;
+    firebaseBootstrapStarted = true;
+
+    try {
+        if (!FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey === "YOUR_API_KEY" || typeof firebase === 'undefined') {
+            return;
+        }
+
         firebase.initializeApp(FIREBASE_CONFIG);
         fbDB = firebase.database();
-        useFirebase = true;
-        console.log('Firebase connected - data is shared in real-time!');
+
+        if (firebase.auth) {
+            firebase.auth().signInAnonymously().then(function() {
+                useFirebase = true;
+                console.log('Firebase connected with anonymous auth - data is shared in real-time!');
+                seedSampleData();
+                setupFirebaseListeners();
+                refreshFirebaseViews();
+            }).catch(function(err) {
+                console.warn('Firebase anonymous auth failed, using localStorage fallback:', err);
+            });
+        } else {
+            useFirebase = true;
+            console.log('Firebase connected - data is shared in real-time!');
+        }
+    } catch (err) {
+        console.warn('Firebase init failed, using localStorage fallback:', err);
     }
-} catch (err) {
-    console.warn('Firebase init failed, using localStorage fallback:', err);
+}
+
+function refreshFirebaseViews() {
+    if (document.readyState !== 'complete' && document.readyState !== 'interactive') return;
+    renderBlogs();
+    renderVideos();
+    renderMemes();
+    renderChatMessages();
 }
 
 // ==========================================

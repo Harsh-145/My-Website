@@ -1568,19 +1568,38 @@ document.addEventListener('keydown', function(e) {
 // ==========================================
 function seedSampleData() {
     if (useFirebase && fbDB) {
-        fbDB.ref('blogs').once('value', function(snap) {
-            if (!snap.val() || (Array.isArray(snap.val()) && snap.val().length === 0)) {
-                doSeed();
-            }
-        });
+        ensureSeedCollection('blogs', getSampleBlogs());
+        ensureSeedCollection('videos', getSampleVideos());
+        ensureSeedCollection('memes', getSampleMemes());
+        ensureSeedCollection('users', getSampleUsers());
+        ensureSeedCollection('chat_general', getSampleChat());
     } else {
         if (DB.get('seeded', false)) return;
         doSeed();
     }
 }
 
+function ensureSeedCollection(key, sampleData) {
+    fbDB.ref(key).once('value', function(snap) {
+        var current = snap.val();
+        var isEmpty = !current || (Array.isArray(current) && current.length === 0) || (typeof current === 'object' && Object.keys(current).length === 0);
+        if (isEmpty) {
+            fbDB.ref(key).set(sampleData);
+        }
+    });
+}
+
 function doSeed() {
-    var sampleBlogs = [
+    DB.set('blogs', getSampleBlogs());
+    DB.set('videos', getSampleVideos());
+    DB.set('memes', getSampleMemes());
+    DB.set('users', getSampleUsers());
+    DB.set('chat_general', getSampleChat());
+    DB.set('seeded', true);
+}
+
+function getSampleBlogs() {
+    return [
         {
             id: 1,
             title: 'Why Severus Snape is the Most Complex Character in Fiction',
@@ -1629,16 +1648,60 @@ function doSeed() {
             ]
         }
     ];
+}
 
-    var sampleChat = [
+function getSampleVideos() {
+    return [
+        {
+            id: 101,
+            title: 'Top Hogwarts Moments',
+            description: 'A short highlight reel of the most magical scenes.',
+            url: 'https://www.youtube.com/watch?v=9rK5jE1V7pQ',
+            thumbnail: '',
+            anonymous: false,
+            author: 'Harsh Yadav',
+            createdAt: Date.now() - 86400000 * 2,
+            views: 12
+        }
+    ];
+}
+
+function getSampleMemes() {
+    return [
+        {
+            id: 201,
+            caption: 'When the polyjuice potion is still not ready',
+            image: 'https://images.unsplash.com/photo-1520694478161-3f8a9a8f2b3d?auto=format&fit=crop&w=900&q=60',
+            tags: ['hogwarts', 'funny'],
+            anonymous: false,
+            author: 'Harsh Yadav',
+            createdAt: Date.now() - 86400000,
+            likes: 7,
+            likedBy: []
+        }
+    ];
+}
+
+function getSampleUsers() {
+    return [
+        {
+            username: 'Harsh Yadav',
+            email: 'harsh@example.com',
+            house: 'gryffindor',
+            password: simpleHash('harsh1234'),
+            joinedAt: Date.now() - 86400000 * 10,
+            role: 'admin',
+            status: 'active'
+        }
+    ];
+}
+
+function getSampleChat() {
+    return [
         { id: 1, text: 'Welcome to The Wizarding Hub! Feel free to chat about all things Harry Potter.', author: 'Dumbledore Bot', anonymous: false, house: 'gryffindor', timestamp: Date.now() - 3600000 * 2 },
         { id: 2, text: 'Just finished re-reading Prisoner of Azkaban. Still the best book in the series!', author: 'Harsh Yadav', anonymous: false, house: 'gryffindor', timestamp: Date.now() - 3600000 },
         { id: 3, text: 'Goblet of Fire fans unite! The Triwizard Tournament was peak HP', author: 'Anonymous Wizard', anonymous: true, house: null, timestamp: Date.now() - 1800000 }
     ];
-
-    DB.set('blogs', sampleBlogs);
-    DB.set('chat_general', sampleChat);
-    DB.set('seeded', true);
 }
 
 // ==========================================

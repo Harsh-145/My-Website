@@ -243,13 +243,13 @@ function handleRegister(e) {
         firebase.auth().createUserWithEmailAndPassword(email, password)
             .then(function(userCredential) {
                 var user = userCredential.user;
-                
+
                 // Store extra user info in DB
                 var users = getUsers();
                 var newUser = {
                     uid: user.uid,
-                    username: username, 
-                    email: email, 
+                    username: username,
+                    email: email,
                     house: house,
                     joinedAt: Date.now(),
                     role: ADMIN_USERS.indexOf(username) !== -1 ? 'admin' : 'user',
@@ -257,14 +257,17 @@ function handleRegister(e) {
                 };
                 users.push(newUser);
                 DB.set('users', users);
-                
-                currentUser = { username: username, house: house, email: email, uid: user.uid };
-                DB.set('currentUser', currentUser);
-                
+
+                // Send email verification link
+                return user.sendEmailVerification().then(function() {
+                    // Sign them out — they must verify email before logging in
+                    return firebase.auth().signOut();
+                });
+            })
+            .then(function() {
                 document.getElementById('register-form').reset();
                 closeAuthModal();
-                updateAuthUI();
-                showToast('Welcome to the Order, ' + username + '!', 'success');
+                showToast('📬 Registration successful! A verification link has been sent to ' + email + '. Please check your inbox and click the link before signing in.', 'success');
             })
             .catch(function(error) {
                 showToast(error.message, 'error');
@@ -288,11 +291,37 @@ function handleLogin(e) {
         firebase.auth().signInWithEmailAndPassword(email, password)
             .then(function(userCredential) {
                 var user = userCredential.user;
-                
-                // Retrieve user info from local DB fallback to construct currentUser
+
+                // Block login if email is not yet verified
+                if (!user.emailVerified) {
+                    firebase.auth().signOut();
+                    showToast('📬 Your email is not verified yet. Please check your inbox and click the verification link. Or click below to resend it.', 'error');
+                    
+                    // Show resend button briefly
+                    var toastContainer = document.getElementById('toast-container');
+                    var resendBtn = document.createElement('div');
+                    resendBtn.className = 'toast info';
+                    resendBtn.style.cursor = 'pointer';
+                    resendBtn.innerHTML = '🔁 Click here to resend verification email';
+                    resendBtn.onclick = function() {
+                        // Re-sign in temporarily just to send verification
+                        firebase.auth().signInWithEmailAndPassword(email, password).then(function(cred) {
+                            cred.user.sendEmailVerification().then(function() {
+                                firebase.auth().signOut();
+                                showToast('✅ Verification email resent! Check your inbox.', 'success');
+                            });
+                        });
+                        resendBtn.remove();
+                    };
+                    toastContainer.appendChild(resendBtn);
+                    setTimeout(function() { if (resendBtn.parentNode) resendBtn.remove(); }, 8000);
+                    return;
+                }
+
+                // Retrieve user info from DB to construct currentUser
                 var users = getUsers();
                 var dbUser = users.find(function(u) { return u.email && u.email.toLowerCase() === email.toLowerCase(); });
-                
+
                 if (dbUser) {
                     if (dbUser.status === 'banned') {
                         firebase.auth().signOut();
@@ -304,9 +333,9 @@ function handleLogin(e) {
                     // Fallback if not in DB yet
                     currentUser = { username: email.split('@')[0], house: 'gryffindor', email: email, uid: user.uid };
                 }
-                
+
                 DB.set('currentUser', currentUser);
-                
+
                 document.getElementById('login-form').reset();
                 closeAuthModal();
                 updateAuthUI();

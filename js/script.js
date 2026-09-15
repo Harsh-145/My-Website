@@ -43,12 +43,12 @@ function bootstrapFirebase() {
 
         firebase.initializeApp(FIREBASE_CONFIG);
         fbDB = firebase.database();
+        useFirebase = true;
 
         if (firebase.auth) {
             firebase.auth().onAuthStateChanged(function(user) {
                 if (user) {
                     console.log('Successfully logged in as:', user.email);
-                    useFirebase = true;
                     // Seed sample data if empty (needs user to be auth'd)
                     seedSampleData();
                     setupFirebaseListeners();

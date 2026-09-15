@@ -48,8 +48,20 @@ function bootstrapFirebase() {
         if (firebase.auth) {
             firebase.auth().onAuthStateChanged(function(user) {
                 if (user) {
+                    // Check if this is a Google/social login (always considered verified)
+                    var isGoogleUser = user.providerData && user.providerData.some(function(p) {
+                        return p.providerId === 'google.com';
+                    });
+
+                    // Block unverified email/password accounts from accessing the app
+                    if (!user.emailVerified && !isGoogleUser) {
+                        console.log('User email not verified, signing out:', user.email);
+                        firebase.auth().signOut();
+                        return; // Stop — do not set currentUser or load data
+                    }
+
                     console.log('Successfully logged in as:', user.email);
-                    
+
                     // Restore currentUser from localStorage on page refresh
                     var savedUser = DB.get('currentUser', null);
                     if (savedUser && savedUser.email === user.email) {
@@ -60,9 +72,9 @@ function bootstrapFirebase() {
                         currentUser = { username: user.displayName || user.email.split('@')[0], email: user.email, house: 'gryffindor', uid: user.uid };
                         DB.set('currentUser', currentUser);
                     }
-                    
+
                     updateAuthUI();
-                    
+
                     // Now safe to read/write DB (auth != null is satisfied)
                     seedSampleData();
                     setupFirebaseListeners();
@@ -797,6 +809,11 @@ themeToggleBtn.addEventListener('click', function() {
 function getBlogs() { return DB.get('blogs', []); }
 
 function openBlogEditor() {
+    if (!currentUser) {
+        showToast('Please sign in to write a blog post! 🧙', 'error');
+        openAuthModal();
+        return;
+    }
     document.getElementById('blog-editor-modal').classList.add('open');
 }
 function closeBlogEditor() {
@@ -1040,6 +1057,11 @@ function shareBlog(id) {
 function getVideos() { return DB.get('videos', []); }
 
 function openVideoUploader() {
+    if (!currentUser) {
+        showToast('Please sign in to upload videos! 🎬', 'error');
+        openAuthModal();
+        return;
+    }
     document.getElementById('video-upload-modal').classList.add('open');
 }
 function closeVideoUploader() {
@@ -1181,6 +1203,11 @@ function getMemes() { return DB.get('memes', []); }
 var currentMemeData = null;
 
 function openMemeUploader() {
+    if (!currentUser) {
+        showToast('Please sign in to post memes! 🧙‍♂️', 'error');
+        openAuthModal();
+        return;
+    }
     document.getElementById('meme-upload-modal').classList.add('open');
 }
 function closeMemeUploader() {
@@ -1356,6 +1383,13 @@ function sendMessage(e) {
     var input = document.getElementById('chat-input');
     var text = input.value.trim();
     if (!text) return;
+
+    // Require sign-in to send messages (DB rules enforce auth != null)
+    if (!currentUser) {
+        showToast('Please sign in to chat! 💬', 'error');
+        openAuthModal();
+        return;
+    }
 
     var isAnonymous = document.getElementById('chat-anonymous').checked;
 
@@ -1814,7 +1848,6 @@ function getSampleUsers() {
             username: 'Harsh Yadav',
             email: 'harsh@example.com',
             house: 'gryffindor',
-            password: simpleHash('harsh1234'),
             joinedAt: Date.now() - 86400000 * 10,
             role: 'admin',
             status: 'active'

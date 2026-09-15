@@ -1,5 +1,5 @@
 // Service Worker for The Wizarding Hub PWA
-const CACHE_NAME = 'wizarding-hub-v1';
+const CACHE_NAME = 'wizarding-hub-v4';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -13,8 +13,8 @@ const STATIC_ASSETS = [
   './manifest.json'
 ];
 
-const FONT_CACHE = 'wizarding-hub-fonts-v1';
-const DYNAMIC_CACHE = 'wizarding-hub-dynamic-v1';
+const FONT_CACHE = 'wizarding-hub-fonts-v4';
+const DYNAMIC_CACHE = 'wizarding-hub-dynamic-v4';
 
 // Install — cache static assets
 self.addEventListener('install', event => {
@@ -52,30 +52,19 @@ self.addEventListener('fetch', event => {
   // Skip non-GET requests
   if (request.method !== 'GET') return;
 
-  // Skip Firebase and other API requests — always go network
-  if (url.hostname.includes('firebaseio.com') ||
-      url.hostname.includes('firebase') ||
-      url.hostname.includes('googleapis.com') && url.pathname.includes('/v1')) {
-    return;
+  // Skip ALL Firebase, Google Identity, and auth-related requests — NEVER cache these
+  if (
+    url.hostname.includes('firebaseio.com') ||
+    url.hostname.includes('firebaseapp.com') ||
+    url.hostname.includes('firebase.googleapis.com') ||
+    url.hostname.includes('identitytoolkit.googleapis.com') ||
+    url.hostname.includes('securetoken.googleapis.com') ||
+    url.hostname.includes('gstatic.com') ||
+    url.hostname.includes('googleapis.com')
+  ) {
+    return; // Let browser handle directly — no caching
   }
 
-  // Google Fonts — cache first, then network
-  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
-    event.respondWith(
-      caches.open(FONT_CACHE).then(cache => {
-        return cache.match(request).then(cached => {
-          if (cached) return cached;
-          return fetch(request).then(response => {
-            if (response.ok) {
-              cache.put(request, response.clone());
-            }
-            return response;
-          });
-        });
-      })
-    );
-    return;
-  }
 
   // Static assets — cache first, fallback to network
   if (STATIC_ASSETS.some(asset => url.pathname.endsWith(asset.replace('./', '')) || url.pathname === '/' || url.pathname.endsWith('index.html'))) {

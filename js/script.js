@@ -49,7 +49,21 @@ function bootstrapFirebase() {
             firebase.auth().onAuthStateChanged(function(user) {
                 if (user) {
                     console.log('Successfully logged in as:', user.email);
-                    // Seed sample data if empty (needs user to be auth'd)
+                    
+                    // Restore currentUser from localStorage on page refresh
+                    var savedUser = DB.get('currentUser', null);
+                    if (savedUser && savedUser.email === user.email) {
+                        currentUser = savedUser;
+                        currentUser.uid = user.uid;
+                    } else if (!currentUser) {
+                        // Fallback: user is in Firebase Auth but not in our local state
+                        currentUser = { username: user.displayName || user.email.split('@')[0], email: user.email, house: 'gryffindor', uid: user.uid };
+                        DB.set('currentUser', currentUser);
+                    }
+                    
+                    updateAuthUI();
+                    
+                    // Now safe to read/write DB (auth != null is satisfied)
                     seedSampleData();
                     setupFirebaseListeners();
                     refreshFirebaseViews();
@@ -62,8 +76,7 @@ function bootstrapFirebase() {
                 }
             });
         } else {
-            useFirebase = true;
-            console.log('Firebase connected without Auth!');
+            console.log('Firebase connected without Auth module.');
             setupFirebaseListeners();
             refreshFirebaseViews();
         }
@@ -86,6 +99,11 @@ function refreshFirebaseViews() {
 var dataCache = {};
 var LOCAL_ONLY_KEYS = ['currentUser', 'seeded'];
 
+// Helper: check if Firebase Auth user is currently signed in
+function isFirebaseAuthed() {
+    return useFirebase && firebase.auth && firebase.auth().currentUser;
+}
+
 var DB = {
     get: function(key, fallback) {
         var fb = fallback !== undefined ? fallback : [];
@@ -98,7 +116,8 @@ var DB = {
     set: function(key, value) {
         dataCache[key] = value;
         try { localStorage.setItem('wh_' + key, JSON.stringify(value)); } catch (e) {}
-        if (useFirebase && fbDB && LOCAL_ONLY_KEYS.indexOf(key) === -1) {
+        // Only write to Firebase if user is authenticated (satisfies auth != null rules)
+        if (isFirebaseAuthed() && fbDB && LOCAL_ONLY_KEYS.indexOf(key) === -1) {
             var fbPath = key.replace(/_/g, '/');
             fbDB.ref(fbPath).set(value).catch(function(err) { console.error('Firebase write error:', err); });
         }
@@ -106,7 +125,7 @@ var DB = {
     remove: function(key) {
         delete dataCache[key];
         localStorage.removeItem('wh_' + key);
-        if (useFirebase && fbDB && LOCAL_ONLY_KEYS.indexOf(key) === -1) {
+        if (isFirebaseAuthed() && fbDB && LOCAL_ONLY_KEYS.indexOf(key) === -1) {
             var fbPath = key.replace(/_/g, '/');
             fbDB.ref(fbPath).remove().catch(function(e) { console.error(e); });
         }
@@ -363,6 +382,18 @@ function logout() {
 function clearLocalSession() {
     currentUser = null;
     DB.set('currentUser', null);
+    
+    // Detach Firebase listeners to prevent Permission Denied after sign-out
+    if (fbDB && listenersSetup) {
+        ['blogs', 'videos', 'memes', 'users'].forEach(function(key) {
+            fbDB.ref(key).off();
+        });
+        ['general', 'gryffindor', 'slytherin', 'ravenclaw', 'hufflepuff'].forEach(function(room) {
+            fbDB.ref('chat/' + room).off();
+        });
+        listenersSetup = false;
+    }
+    
     updateAuthUI();
     navigateTo('hero');
     // Clear data cache on logout to respect DB rules
@@ -376,10 +407,12 @@ function updateAuthUI() {
     var adminNavItem = document.getElementById('admin-nav-item');
 
     // Validate session — if currentUser exists but not found in users DB, clear it
+    // But don't clear if Firebase Auth says user is still logged in (DB may not have loaded yet)
     if (currentUser) {
         var users = getUsers();
         var found = users.find(function(u) { return u.username === currentUser.username; });
-        if (users.length > 0 && !found) {
+        var firebaseStillAuthed = useFirebase && firebase.auth && firebase.auth().currentUser;
+        if (users.length > 0 && !found && !firebaseStillAuthed) {
             // User was deleted or data was wiped
             currentUser = null;
             DB.set('currentUser', null);
@@ -1826,14 +1859,17 @@ window.addEventListener('appinstalled', function() {
 // INITIALIZATION
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {
-    seedSampleData();
+    // Render from localStorage cache immediately for fast first paint
     updateAuthUI();
     renderBlogs();
     renderVideos();
     renderMemes();
     renderChatMessages();
     startChatPolling();
-    setupFirebaseListeners();
+
+    // Note: Firebase listeners and seeding are handled by onAuthStateChanged
+    // in bootstrapFirebase() — they only run once a user is authenticated,
+    // which satisfies the "auth != null" database rules.
 
     if (useFirebase) {
         console.log('The Wizarding Hub is running with Firebase - data syncs across all visitors in real-time!');

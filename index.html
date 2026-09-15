@@ -424,14 +424,18 @@
             <!-- Login Form -->
             <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
                 <div class="form-group">
-                    <label for="login-username">Username</label>
-                    <input type="text" id="login-username" placeholder="Your wizard name" required>
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" placeholder="owl@hogwarts.edu" required>
                 </div>
                 <div class="form-group">
                     <label for="login-password">Password</label>
                     <input type="password" id="login-password" placeholder="Your secret spell" required>
                 </div>
                 <button type="submit" class="btn btn-gold btn-full">Enter the Wizarding World</button>
+                <div class="auth-separator" style="text-align:center; margin: 15px 0; color: #888;">OR</div>
+                <button type="button" class="btn btn-outline btn-full" onclick="loginWithGoogle()" style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 18px; height: 18px;"> Sign in with Google
+                </button>
             </form>
 
             <!-- Register Form -->

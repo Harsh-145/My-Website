@@ -45,18 +45,27 @@ function bootstrapFirebase() {
         fbDB = firebase.database();
 
         if (firebase.auth) {
-            firebase.auth().signInAnonymously().then(function() {
-                useFirebase = true;
-                console.log('Firebase connected with anonymous auth - data is shared in real-time!');
-                seedSampleData();
-                setupFirebaseListeners();
-                refreshFirebaseViews();
-            }).catch(function(err) {
-                console.warn('Firebase anonymous auth failed, using localStorage fallback:', err);
+            firebase.auth().onAuthStateChanged(function(user) {
+                if (user) {
+                    console.log('Successfully logged in as:', user.email);
+                    useFirebase = true;
+                    // Seed sample data if empty (needs user to be auth'd)
+                    seedSampleData();
+                    setupFirebaseListeners();
+                    refreshFirebaseViews();
+                } else {
+                    console.log('No user is currently logged in.');
+                    // If rules require auth, we can't read DB. 
+                    // Let's clear our views
+                    dataCache = {};
+                    refreshFirebaseViews();
+                }
             });
         } else {
             useFirebase = true;
-            console.log('Firebase connected - data is shared in real-time!');
+            console.log('Firebase connected without Auth!');
+            setupFirebaseListeners();
+            refreshFirebaseViews();
         }
     } catch (err) {
         console.warn('Firebase init failed, using localStorage fallback:', err);
@@ -211,98 +220,153 @@ function handleRegister(e) {
         return;
     }
 
-    var users = getUsers();
-    if (users.find(function(u) { return u.username.toLowerCase() === username.toLowerCase(); })) {
-        showToast('Username already taken!', 'error');
-        return;
+    if (useFirebase && firebase.auth) {
+        firebase.auth().createUserWithEmailAndPassword(email, password)
+            .then(function(userCredential) {
+                var user = userCredential.user;
+                
+                // Store extra user info in DB
+                var users = getUsers();
+                var newUser = {
+                    uid: user.uid,
+                    username: username, 
+                    email: email, 
+                    house: house,
+                    joinedAt: Date.now(),
+                    role: ADMIN_USERS.indexOf(username) !== -1 ? 'admin' : 'user',
+                    status: 'active'
+                };
+                users.push(newUser);
+                DB.set('users', users);
+                
+                currentUser = { username: username, house: house, email: email, uid: user.uid };
+                DB.set('currentUser', currentUser);
+                
+                document.getElementById('register-form').reset();
+                closeAuthModal();
+                updateAuthUI();
+                showToast('Welcome to the Order, ' + username + '!', 'success');
+            })
+            .catch(function(error) {
+                showToast(error.message, 'error');
+            });
+    } else {
+        showToast('Firebase Auth is not available. Check configuration.', 'error');
     }
-    if (users.find(function(u) { return u.email && u.email.toLowerCase() === email.toLowerCase(); })) {
-        showToast('Email already registered! Try signing in.', 'error');
-        return;
-    }
-
-    var user = {
-        username: username, email: email, house: house,
-        password: simpleHash(password),
-        joinedAt: Date.now(),
-        role: ADMIN_USERS.indexOf(username) !== -1 ? 'admin' : 'user',
-        status: 'active'
-    };
-    users.push(user);
-    DB.set('users', users);
-
-    currentUser = { username: username, house: house, email: email };
-    DB.set('currentUser', currentUser);
-
-    document.getElementById('register-form').reset();
-    closeAuthModal();
-    updateAuthUI();
-    renderBlogs(); renderVideos(); renderMemes();
-    showToast('Welcome to the Order, ' + username + '!', 'success');
 }
 
 function handleLogin(e) {
     e.preventDefault();
-    var username = document.getElementById('login-username').value.trim();
+    var email = document.getElementById('login-email').value.trim();
     var password = document.getElementById('login-password').value;
 
-    if (!username || !password) {
+    if (!email || !password) {
         showToast('Please fill in all fields!', 'error');
         return;
     }
 
-    var users = getUsers();
-    // Case-insensitive username match
-    var user = users.find(function(u) {
-        return u.username.toLowerCase() === username.toLowerCase();
-    });
-
-    if (!user) {
-        showToast('No account found with that username!', 'error');
-        document.getElementById('login-password').value = '';
-        return;
-    }
-
-    // Support both hashed and legacy plain-text passwords
-    var passwordMatch = false;
-    if (user.password && user.password.indexOf('wh_') === 0) {
-        // Hashed password
-        passwordMatch = (simpleHash(password) === user.password);
+    if (useFirebase && firebase.auth) {
+        firebase.auth().signInWithEmailAndPassword(email, password)
+            .then(function(userCredential) {
+                var user = userCredential.user;
+                
+                // Retrieve user info from local DB fallback to construct currentUser
+                var users = getUsers();
+                var dbUser = users.find(function(u) { return u.email && u.email.toLowerCase() === email.toLowerCase(); });
+                
+                if (dbUser) {
+                    if (dbUser.status === 'banned') {
+                        firebase.auth().signOut();
+                        showToast('This account has been banned.', 'error');
+                        return;
+                    }
+                    currentUser = { username: dbUser.username, house: dbUser.house, email: email, uid: user.uid };
+                } else {
+                    // Fallback if not in DB yet
+                    currentUser = { username: email.split('@')[0], house: 'gryffindor', email: email, uid: user.uid };
+                }
+                
+                DB.set('currentUser', currentUser);
+                
+                document.getElementById('login-form').reset();
+                closeAuthModal();
+                updateAuthUI();
+                showToast('Welcome back, ' + currentUser.username + '!', 'success');
+            })
+            .catch(function(error) {
+                document.getElementById('login-password').value = '';
+                showToast(error.message, 'error');
+            });
     } else {
-        // Legacy plain-text — migrate to hashed on successful login
-        passwordMatch = (user.password === password);
-        if (passwordMatch) {
-            user.password = simpleHash(password);
-            DB.set('users', users);
-        }
+        showToast('Firebase Auth is not available. Check configuration.', 'error');
     }
+}
 
-    if (!passwordMatch) {
-        showToast('Incorrect password!', 'error');
-        document.getElementById('login-password').value = '';
-        return;
+function loginWithGoogle() {
+    if (useFirebase && firebase.auth) {
+        var provider = new firebase.auth.GoogleAuthProvider();
+        firebase.auth().signInWithPopup(provider)
+            .then(function(result) {
+                var user = result.user;
+                
+                var users = getUsers();
+                var dbUser = users.find(function(u) { return u.email && u.email.toLowerCase() === user.email.toLowerCase(); });
+                
+                if (dbUser) {
+                    if (dbUser.status === 'banned') {
+                        firebase.auth().signOut();
+                        showToast('This account has been banned.', 'error');
+                        return;
+                    }
+                    currentUser = { username: dbUser.username, house: dbUser.house, email: user.email, uid: user.uid };
+                } else {
+                    // First time Google login, create a basic profile
+                    var username = user.displayName || user.email.split('@')[0];
+                    currentUser = { username: username, house: 'gryffindor', email: user.email, uid: user.uid };
+                    
+                    var newUser = {
+                        uid: user.uid,
+                        username: username, 
+                        email: user.email, 
+                        house: 'gryffindor',
+                        joinedAt: Date.now(),
+                        role: ADMIN_USERS.indexOf(username) !== -1 ? 'admin' : 'user',
+                        status: 'active'
+                    };
+                    users.push(newUser);
+                    DB.set('users', users);
+                }
+                
+                DB.set('currentUser', currentUser);
+                closeAuthModal();
+                updateAuthUI();
+                showToast('Welcome back, ' + currentUser.username + '!', 'success');
+            })
+            .catch(function(error) {
+                showToast('Google Sign-In failed: ' + error.message, 'error');
+            });
+    } else {
+        showToast('Firebase Auth is not available.', 'error');
     }
-
-    if (user.status === 'banned') {
-        showToast('This account has been banned.', 'error');
-        return;
-    }
-
-    currentUser = { username: user.username, house: user.house, email: user.email };
-    DB.set('currentUser', currentUser);
-
-    document.getElementById('login-form').reset();
-    closeAuthModal();
-    updateAuthUI();
-    renderBlogs(); renderVideos(); renderMemes();
-    showToast('Welcome back, ' + user.username + '!', 'success');
 }
 
 function logout() {
+    if (useFirebase && firebase.auth) {
+        firebase.auth().signOut().then(function() {
+            clearLocalSession();
+        });
+    } else {
+        clearLocalSession();
+    }
+}
+
+function clearLocalSession() {
     currentUser = null;
     DB.set('currentUser', null);
     updateAuthUI();
     navigateTo('hero');
+    // Clear data cache on logout to respect DB rules
+    dataCache = {};
     renderBlogs(); renderVideos(); renderMemes();
     showToast('Logged out. Mischief managed!', 'info');
 }
